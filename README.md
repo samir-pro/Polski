@@ -12,7 +12,16 @@ Passing the exam unlocks the next level.
 No backend, no login, no build step. Everything runs in the browser, and your
 progress is saved locally so you can close the tab and carry on later.
 
-## Run it
+## Use it online
+
+The app is published with **GitHub Pages** by `.github/workflows/pages.yml` on every push:
+
+**https://samir-pro.github.io/-Polski/**
+
+One-time setup in the repository: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+(GitHub Pages for a private repository needs a paid GitHub plan; on a free plan, make the repository public.)
+
+## Run it locally
 
 It's plain HTML/CSS/JS. Open `index.html`, or serve the folder:
 
