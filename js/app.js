@@ -101,7 +101,7 @@
 
     const hero = el("section", { class: "hero" }, [
       el("h1", {}, s.name ? `Cześć, ${s.name}! 👋` : "Uczmy się polskiego!"),
-      el("p", { class: "muted" }, "Learn Polish from zero (A0) to advanced (C1) — everyday words and phrases for living and studying in Poland. 31 steps per level; step 31 validates the level and unlocks the next.")
+      el("p", { class: "muted" }, "Learn Polish from zero (A0) to mastery (C2) — everyday words and phrases for living and studying in Poland. 31 steps per level; step 31 validates the level and unlocks the next.")
     ]);
     app.appendChild(hero);
 

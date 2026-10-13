@@ -1,4 +1,4 @@
-# Po Polsku! 🇵🇱 — Learn Polish from A0 → C1 (through English)
+# Po Polsku! 🇵🇱 — Learn Polish from A0 → C2 (through English)
 
 A self-contained web app for learning Polish **from absolute zero**. It's built
 around the words and phrases people actually use every day in Poland, with a
@@ -16,7 +16,7 @@ progress is saved locally so you can close the tab and carry on later.
 
 The app is published with **GitHub Pages** by `.github/workflows/pages.yml` on every push:
 
-**https://samir-pro.github.io/-Polski/**
+**https://samir-pro.github.io/Polski/**
 
 One-time setup in the repository: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
 (GitHub Pages for a private repository needs a paid GitHub plan; on a free plan, make the repository public.)
@@ -34,9 +34,9 @@ python3 -m http.server 8000
 
 | Area | Detail |
 |------|--------|
-| **Levels** | A0 (absolute zero), A1, A2, B1, B2, C1 |
+| **Levels** | A0 (absolute zero), A1, A2, B1, B2, C1, C2 |
 | **Per level** | 30 themed lessons + 1 validation exam = 31 steps |
-| **Total** | 186 steps, ~1,460 high-frequency words & phrases, a tip on every lesson, example sentences |
+| **Total** | 217 steps, ~1,700 high-frequency words & phrases, a tip on every lesson, example sentences |
 | **Life in Poland guide** | Always-open survival guide: emergencies, visa/residence & PESEL, university, housing, banking & BLIK, transport, shopping, health & insurance, phone/SIM, student work, etiquette. Each section has tips + key phrases with audio |
 | **Exercises** | flashcards, multiple choice (both directions), listening, matching, fill-in-the-blank, type-to-translate |
 | **Polish keyboard** | On-screen `ą ć ę ł ń ó ś ź ż` keys. Answers typed without diacritics still count, and the app shows the correct spelling |
@@ -58,6 +58,9 @@ python3 -m http.server 8000
   contracts, debate, idioms, proverbs, traditions, diminutives.
 - **C1 · Advanced**: academic writing & thesis, business and legal Polish, register
   shifts, slang, particles, regional Polish, false friends, settling long-term.
+- **C2 · Mastery**: literary & archaic Polish, allusions and historical sayings, legal
+  precision, chasing slow bureaucracy (ponaglenie), fine shades of meaning, irony,
+  participles & impersonal forms, poetry, cult films, PRL vocabulary, spelling & punctuation, rhetoric.
 
 ## How progress works
 

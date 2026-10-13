@@ -40,7 +40,7 @@ const Exercises = (() => {
   }
 
   // How heavily to favor production exercises (0..1) per level.
-  const PRODUCTION_WEIGHT = { A0: 0.05, A1: 0.15, A2: 0.3, B1: 0.45, B2: 0.6, C1: 0.7 };
+  const PRODUCTION_WEIGHT = { A0: 0.05, A1: 0.15, A2: 0.3, B1: 0.45, B2: 0.6, C1: 0.7, C2: 0.8 };
 
   /* Build the exercise list for a normal lesson step. */
   function buildLesson(level, lesson) {
