@@ -40,7 +40,8 @@ python3 -m http.server 8000
 | **Life in Poland guide** | Always-open survival guide: emergencies, visa/residence & PESEL, university, housing, banking & BLIK, transport, shopping, health & insurance, phone/SIM, student work, etiquette. Each section has tips + key phrases with audio |
 | **Exercises** | flashcards, multiple choice (both directions), listening, matching, fill-in-the-blank, type-to-translate |
 | **Polish keyboard** | On-screen `ą ć ę ł ń ó ś ź ż` keys. Answers typed without diacritics still count, and the app shows the correct spelling |
-| **Audio** | Polish text-to-speech (`pl-PL`) through the browser's Web Speech API. No audio files |
+| **Audio** | Polish text-to-speech (`pl-PL`) through the browser's Web Speech API. No audio files — with adjustable **voice speed** (0.5×–1.5×) in Settings or the 🗣️ chip during lessons |
+| **Review past answers** | **← Previous / Next →** inside every lesson and exam to look back at questions you already answered (read-only: answers can't be changed). Next goes up to the latest question reached |
 | **Gamification** | XP, daily streak, per-step scores, a winding level path, sound effects |
 | **Spaced repetition** | Words you miss come back later (Leitner boxes) |
 

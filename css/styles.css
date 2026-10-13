@@ -355,3 +355,15 @@ a { color: var(--brand-d); }
 .pl-key:active { transform: scale(.94); border-color: var(--accent); }
 .feedback-note { font-weight: 600; font-size: .85rem; color: #8a5a00; margin-top: 2px; }
 [data-theme="medium"] .feedback-note, [data-theme="dark"] .feedback-note { color: #f0c674; }
+
+/* ---- review navigation (previous / next answered question) ---- */
+.nav-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px 0 14px; }
+.nav-btn { padding: 8px 12px; font-size: .9rem; }
+.nav-btn:disabled { opacity: .4; cursor: default; }
+.nav-note { font-size: .8rem; font-weight: 600; text-align: center; flex: 1; }
+.player.reviewing .nav-note { color: #8a5a00; }
+[data-theme="medium"] .player.reviewing .nav-note, [data-theme="dark"] .player.reviewing .nav-note { color: #f0c674; }
+.player.reviewing .exercise { animation: none; }
+.player.reviewing .feedback { position: static; margin: 8px 0 0; border-radius: 12px; }
+.speed-chip { border: none; cursor: pointer; color: var(--ink); font-family: inherit; }
+.slider-scale { display: flex; justify-content: space-between; margin-top: 4px; }

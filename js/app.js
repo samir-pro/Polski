@@ -215,7 +215,9 @@
 
     const session = {
       levelId, stepN, isExam, level, lesson, items, preview,
-      idx: 0, correct: 0, answered: 0, mistakes: []
+      idx: 0, correct: 0, answered: 0, mistakes: [],
+      // review history: frozen copies of answered questions, by item index
+      snaps: [], liveIdx: 0, liveBody: null, liveAnswered: false, view: null
     };
 
     if (isExam) {
@@ -231,8 +233,24 @@
       el("button", { class: "icon-btn", onclick: () => confirmQuit(session.levelId), "aria-label": "Close" }, "✕"),
       el("div", { class: "progress slim" }, [el("div", { class: "progress-bar", style: `width:${pct}%` })]),
       session.preview ? el("span", { class: "stat preview-chip", title: "Preview — not saved" }, "👁") : null,
+      A.supported ? speedChip() : null,
       el("span", { class: "stat" }, session.isExam ? `📝 ${session.idx}/${session.items.length}` : `${session.idx}/${session.items.length}`)
     ]);
+  }
+
+  // Quick voice-speed toggle shown during lessons (also adjustable in Settings).
+  const SPEED_STEPS = [0.6, 0.8, 0.9, 1, 1.2];
+  const speedLabel = () => (A.getRate() < 0.85 ? "🐢 " : "🗣️ ") + A.getRate().toFixed(1) + "×";
+  function speedChip() {
+    const b = el("button", { class: "stat speed-chip", title: "Voice speed — tap to change", "aria-label": "Voice speed" }, speedLabel());
+    b.addEventListener("click", () => {
+      const cur = A.getRate();
+      const next = SPEED_STEPS.find((r) => r > cur + 0.001) ?? SPEED_STEPS[0];
+      A.setRate(next);
+      b.textContent = speedLabel();
+      A.speak("Dzień dobry");
+    });
+    return b;
   }
 
   function confirmQuit(levelId) {
@@ -276,7 +294,13 @@
   }
 
   function nextItem(session) {
+    // Freeze the question we're leaving so it can be reviewed later.
+    if (session.liveBody && session.liveAnswered) session.snaps[session.liveIdx] = freeze(session.liveBody);
+    session.liveBody = null;
+    session.liveAnswered = false;
+    session.view = null;
     if (session.idx >= session.items.length) return finish(session);
+    session.liveIdx = session.idx;
     const item = session.items[session.idx];
     const renderers = {
       flashcard: renderFlashcard, choice: renderChoice, listening: renderListening,
@@ -291,13 +315,70 @@
     if (correct) session.correct++;
     if (word) Storage.scheduleSrs(word, correct);
     session.idx++;
+    session.liveAnswered = true;
+  }
+
+  // A read-only copy of an answered exercise: every control is disabled and
+  // the Continue button removed, so a past answer can be seen but not changed.
+  // Audio buttons (data-say) keep working.
+  function freeze(node) {
+    const copy = node.cloneNode(true);
+    const srcInputs = node.querySelectorAll("input, textarea");
+    copy.querySelectorAll("input, textarea").forEach((inp, i) => {
+      inp.value = srcInputs[i] ? srcInputs[i].value : inp.value;
+      inp.setAttribute("value", inp.value);
+      inp.readOnly = true;
+      inp.disabled = true;
+    });
+    copy.querySelectorAll(".feedback .btn, .pl-keys, .exercise > .btn").forEach((b) => b.remove());
+    copy.querySelectorAll("button").forEach((b) => { if (!b.hasAttribute("data-say")) b.disabled = true; });
+    copy.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-say]");
+      if (t) A.speak(t.getAttribute("data-say"));
+    });
+    return copy;
+  }
+
+  // Previous / Next bar. "Next" never goes beyond the latest question reached.
+  function navBar(session) {
+    const shown = session.view ?? session.liveIdx;
+    const canPrev = shown > 0 && !!session.snaps[shown - 1];
+    const canNext = session.view != null;
+    return el("div", { class: "nav-bar" }, [
+      el("button", { class: "btn nav-btn", disabled: canPrev ? null : "", onclick: () => goTo(session, shown - 1) }, "← Previous"),
+      session.view != null
+        ? el("span", { class: "nav-note" }, `👁 Q${session.view + 1} · read-only`)
+        : el("span", { class: "nav-note muted" }, `Question ${session.liveIdx + 1}`),
+      el("button", { class: "btn nav-btn", disabled: canNext ? null : "", onclick: () => goTo(session, shown + 1) },
+        session.view != null && shown + 1 === session.liveIdx ? "Latest →" : "Next →")
+    ]);
+  }
+
+  function goTo(session, i) {
+    if (i < 0 || i > session.liveIdx) return;
+    // Capture the live question's answered state before stepping back from it.
+    if (session.view == null && session.liveAnswered) session.snaps[session.liveIdx] = freeze(session.liveBody);
+    if (i === session.liveIdx) {
+      session.view = null;
+      renderFrame(session, session.liveBody);
+    } else if (session.snaps[i]) {
+      session.view = i;
+      renderFrame(session, session.snaps[i]);
+    }
+  }
+
+  function renderFrame(session, node) {
+    clear(app);
+    app.appendChild(el("div", { class: "player" + (session.view != null ? " reviewing" : "") },
+      [progressHeader(session), navBar(session), node]));
   }
 
   // ---- exercise renderers --------------------------------------------------
 
   function shell(session, body) {
-    clear(app);
-    app.appendChild(el("div", { class: "player" }, [progressHeader(session), body]));
+    session.liveBody = body;
+    session.view = null;
+    renderFrame(session, body);
   }
 
   function feedbackBar(ok, correctText, onNext, note) {
@@ -337,7 +418,7 @@
       el("div", { class: "ex-kicker muted" }, "New word"),
       el("div", { class: "card flash" }, [
         el("div", { class: "flash-it" }, item.it),
-        el("button", { class: "audio-btn", onclick: () => A.speak(item.it), "aria-label": "Listen" }, "🔊"),
+        el("button", { class: "audio-btn", "data-say": item.it, onclick: () => A.speak(item.it), "aria-label": "Listen" }, "🔊"),
         el("div", { class: "flash-en muted" }, item.en)
       ]),
       el("button", { class: "btn primary big", onclick: () => { record(session, true); nextItem(session); } }, "Got it →")
@@ -350,7 +431,7 @@
     const isItEn = item.mode === "it-en";
     const promptNode = el("div", { class: "prompt" }, [
       el("span", {}, item.prompt),
-      isItEn ? el("button", { class: "audio-btn small", onclick: () => A.speak(item.prompt) }, "🔊") : null
+      isItEn ? el("button", { class: "audio-btn small", "data-say": item.prompt, onclick: () => A.speak(item.prompt) }, "🔊") : null
     ]);
     const opts = el("div", { class: "options" });
     const body = el("div", { class: "exercise" }, [
@@ -379,7 +460,7 @@
     const opts = el("div", { class: "options" });
     const body = el("div", { class: "exercise" }, [
       el("div", { class: "ex-kicker muted" }, "Listen and choose the meaning"),
-      el("button", { class: "card listen-big", onclick: () => A.speak(item.it) }, "🔊 Tap to listen"),
+      el("button", { class: "card listen-big", "data-say": item.it, onclick: () => A.speak(item.it) }, "🔊 Tap to listen"),
       opts
     ]);
     item.options.forEach((opt) => {
@@ -459,7 +540,7 @@
     const sentenceCard = el("div", { class: "card sentence" }, [
       el("span", {}, item.sentence),
       A.supported ? el("button", { class: "audio-btn small", title: "Listen in Polish",
-        onclick: () => A.speak(item.full) }, "🔊") : null
+        "data-say": item.full, onclick: () => A.speak(item.full) }, "🔊") : null
     ]);
     const body = el("div", { class: "exercise" }, [
       el("div", { class: "ex-kicker muted" }, "Fill in the blank"),
@@ -481,7 +562,7 @@
       record(session, ok, item.answer);
       const fb = feedbackBar(ok, `${item.full}`, () => nextItem(session), detail === "accents" ? accentNote(item.answer) : null);
       if (A.supported) fb.insertBefore(el("button", { class: "audio-btn small",
-        onclick: () => A.speak(item.full) }, "🔊"), fb.firstChild);
+        "data-say": item.full, onclick: () => A.speak(item.full) }, "🔊"), fb.firstChild);
       // Hear the full, correct sentence read aloud in Polish.
       A.speak(item.full);
       body.appendChild(fb);
@@ -513,7 +594,7 @@
       if (!ok) session.mistakes.push(`${item.en} = ${item.it}`);
       record(session, ok, item.it);
       const fb = feedbackBar(ok, `${item.en} → ${item.it}`, () => nextItem(session), detail === "accents" ? accentNote(item.it) : null);
-      fb.insertBefore(el("button", { class: "audio-btn small", onclick: () => A.speak(item.it) }, "🔊"), fb.firstChild);
+      fb.insertBefore(el("button", { class: "audio-btn small", "data-say": item.it, onclick: () => A.speak(item.it) }, "🔊"), fb.firstChild);
       A.speak(item.it);
       body.appendChild(fb);
     };
@@ -690,6 +771,20 @@
             (v) => A.setVolume(v),
             (v) => { if (v > 0) A.speak("Cześć! Uczymy się polskiego."); });
 
+          const speedVal = el("span", { class: "slider-val" }, A.getRate().toFixed(1) + "×");
+          const speedInput = el("input", { class: "slider", type: "range", min: String(A.RATE_MIN), max: String(A.RATE_MAX),
+            step: "0.1", value: String(A.getRate()), "aria-label": "Reading voice speed" });
+          speedInput.addEventListener("input", () => {
+            A.setRate(parseFloat(speedInput.value));
+            speedVal.textContent = A.getRate().toFixed(1) + "×";
+          });
+          speedInput.addEventListener("change", () => A.speak("Dzień dobry, jak się masz?"));
+          const speed = el("div", { class: "slider-row" }, [
+            el("div", { class: "slider-head" }, [el("span", {}, "🐢 Reading voice speed"), speedVal]),
+            speedInput,
+            el("div", { class: "slider-scale muted small" }, [el("span", {}, "Slow 0.5×"), el("span", {}, "Normal 1×"), el("span", {}, "Fast 1.5×")])
+          ]);
+
           const fx = mkSlider("🔔", "Feedback sounds volume",
             () => Sound.getVolume(),
             (v) => Sound.setVolume(v),
@@ -697,7 +792,7 @@
 
           const note = el("p", { class: "muted small" },
             A.supported ? "" : "Reading voice isn't supported in this browser.");
-          return el("div", {}, [voice, fx, note]);
+          return el("div", {}, [voice, speed, fx, note]);
         })()
       ]),
 
