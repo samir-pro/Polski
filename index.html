@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#c8102e" />
   <meta name="description" content="Po Polsku! Learn Polish from A0 (zero) to C2 — everyday Polish for living and studying in Poland, right in your browser." />
   <title>Po Polsku! · Learn Polish A0–C2</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇵🇱</text></svg>" />
   <script>
     // Apply the saved theme before paint to avoid a flash of the wrong colors.
     (function () {
@@ -30,8 +32,11 @@
   <!-- Toast / feedback layer -->
   <div id="toast" class="toast" aria-live="polite"></div>
 
+  <noscript><p style="text-align:center">Po Polsku! needs JavaScript to run.</p></noscript>
+
   <script src="js/content.js"></script>
   <script src="js/guide.js"></script>
+  <script src="js/grammar.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/sounds.js"></script>
   <script src="js/storage.js"></script>

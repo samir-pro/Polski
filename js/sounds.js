@@ -7,7 +7,8 @@
 const Sound = (() => {
   const KEY = "popolsku.vol.fx";
   let ctx = null;
-  let vol = parseFloat(localStorage.getItem(KEY));
+  let vol = NaN;
+  try { vol = parseFloat(localStorage.getItem(KEY)); } catch (e) {}
   if (isNaN(vol)) vol = 0.6; // 0..1
 
   // Lazily create / resume the AudioContext (must follow a user gesture).
@@ -46,7 +47,7 @@ const Sound = (() => {
 
   function setVolume(v) {
     vol = Math.max(0, Math.min(1, v));
-    localStorage.setItem(KEY, String(vol));
+    try { localStorage.setItem(KEY, String(vol)); } catch (e) {}
   }
   function getVolume() { return vol; }
 

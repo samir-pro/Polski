@@ -4,7 +4,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["claude/polish-learning-app-06lhex", "main"]
+    branches: ["claude/polish-learning-app-06lhex", "main", "ccr-9eca7c8c-qfmtzd"]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate course content
+        run: node tools/validate.js
       - uses: actions/configure-pages@v5
         with:
           enablement: true

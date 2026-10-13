@@ -1,61 +1,114 @@
 /* ============================================================================
- * Audio — Polish text-to-speech via the browser's Web Speech API.
- * No audio files needed. Gracefully degrades if the browser lacks support.
+ * Speech — Polish text-to-speech and (where available) speech recognition,
+ * both through the browser's Web Speech API. No audio files needed.
+ *
+ *  - speak(text)  reads Polish aloud with the best Polish voice available.
+ *  - The voice, speed and volume are chosen in Settings and saved per browser.
+ *  - listen()     transcribes one Polish utterance for speaking exercises
+ *                 (Chrome, Edge, Safari). Resolves with a list of guesses.
  * ========================================================================== */
 
-const Audio = (() => {
+const Speech = (() => {
   const supported = "speechSynthesis" in window;
-  const VKEY = "popolsku.vol.voice";
-  let polishVoice = null;
-  let volume = parseFloat(localStorage.getItem(VKEY));
-  if (isNaN(volume)) volume = 1; // 0..1
-  const RKEY = "popolsku.rate.voice";
-  const RATE_MIN = 0.5, RATE_MAX = 1.5;
-  let rate = parseFloat(localStorage.getItem(RKEY));
-  if (isNaN(rate)) rate = 0.9; // speaking speed, 1 = normal
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
 
-  function pickVoice() {
+  const VKEY = "popolsku.vol.voice";
+  const RKEY = "popolsku.rate.voice";
+  const NKEY = "popolsku.voice.name";
+  const RATE_MIN = 0.5, RATE_MAX = 1.5;
+
+  let volume = parseFloat(store.get(VKEY));
+  if (isNaN(volume)) volume = 1;
+  let rate = parseFloat(store.get(RKEY));
+  if (isNaN(rate)) rate = 0.9;
+  let voices = [];
+  let voice = null;
+
+  // Higher-quality voices first: neural/online voices sound far more natural.
+  const QUALITY = [/natural/i, /online/i, /neural/i, /premium/i, /enhanced/i, /google/i, /zosia|paulina|ewa|maja|agnieszka|marek|jacek/i];
+  const score = (v) => {
+    let s = v.lang === "pl-PL" ? 10 : 0;
+    QUALITY.forEach((re, i) => { if (re.test(v.name)) s += QUALITY.length - i; });
+    if (v.localService === false) s += 1;
+    return s;
+  };
+
+  function loadVoices() {
     if (!supported) return;
-    const voices = window.speechSynthesis.getVoices();
-    // Prefer a Polish voice; fall back to anything tagged "pl".
-    polishVoice =
-      voices.find((v) => v.lang === "pl-PL") ||
-      voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("pl")) ||
-      null;
+    voices = window.speechSynthesis.getVoices()
+      .filter((v) => v.lang && v.lang.toLowerCase().replace("_", "-").startsWith("pl"))
+      .sort((a, b) => score(b) - score(a));
+    const saved = store.get(NKEY);
+    voice = voices.find((v) => v.name === saved) || voices[0] || null;
   }
 
   if (supported) {
-    pickVoice();
-    // Voices load asynchronously in most browsers.
-    window.speechSynthesis.onvoiceschanged = pickVoice;
+    loadVoices();
+    window.speechSynthesis.addEventListener?.("voiceschanged", loadVoices);
   }
 
-  function speak(text) {
+  // Strip notes and alternatives so "dziś / dzisiaj (today)" reads naturally.
+  const clean = (t) => String(t).replace(/\([^)]*\)/g, "").split(" / ")[0].replace(/…/g, "").trim();
+
+  function speak(text, opts = {}) {
     if (!supported || !text || volume <= 0) return;
     try {
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "pl-PL";
-      u.rate = rate;
+      const u = new SpeechSynthesisUtterance(clean(text));
+      u.lang = voice ? voice.lang : "pl-PL";
+      u.rate = opts.slow ? Math.max(RATE_MIN, rate * 0.65) : rate;
       u.volume = volume;
-      if (polishVoice) u.voice = polishVoice;
+      if (voice) u.voice = voice;
       window.speechSynthesis.speak(u);
-    } catch (e) {
-      /* no-op */
-    }
+    } catch (e) { /* no-op */ }
   }
 
-  function setVolume(v) { volume = Math.max(0, Math.min(1, v)); localStorage.setItem(VKEY, String(volume)); }
+  function setVolume(v) { volume = Math.max(0, Math.min(1, v)); store.set(VKEY, String(volume)); }
   function getVolume() { return volume; }
-
-  // Speaking speed (0.5× slow … 1.5× fast), saved per browser.
   function setRate(r) {
     rate = Math.round(Math.max(RATE_MIN, Math.min(RATE_MAX, r)) * 10) / 10;
-    localStorage.setItem(RKEY, String(rate));
+    store.set(RKEY, String(rate));
   }
   function getRate() { return rate; }
+  function getVoices() { return voices; }
+  function getVoice() { return voice; }
+  function setVoice(name) {
+    voice = voices.find((v) => v.name === name) || voice;
+    if (voice) store.set(NKEY, voice.name);
+  }
 
-  return { speak, setVolume, getVolume, setRate, getRate, RATE_MIN, RATE_MAX, get supported() { return supported; } };
+  // ---- speech recognition ----------------------------------------------------
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const canListen = !!Recognition;
+
+  function listen() {
+    return new Promise((resolve, reject) => {
+      if (!canListen) return reject(new Error("unsupported"));
+      const rec = new Recognition();
+      rec.lang = "pl-PL";
+      rec.interimResults = false;
+      rec.maxAlternatives = 5;
+      let done = false;
+      rec.onresult = (e) => {
+        done = true;
+        resolve([...e.results[0]].map((alt) => alt.transcript));
+      };
+      rec.onerror = (e) => { if (!done) { done = true; reject(new Error(e.error || "error")); } };
+      rec.onend = () => { if (!done) { done = true; resolve([]); } };
+      try { window.speechSynthesis && window.speechSynthesis.cancel(); rec.start(); }
+      catch (e) { reject(e); }
+    });
+  }
+
+  return {
+    speak, setVolume, getVolume, setRate, getRate, getVoices, getVoice, setVoice, listen,
+    RATE_MIN, RATE_MAX,
+    get supported() { return supported; },
+    get canListen() { return canListen; }
+  };
 })();
 
-window.Audio2 = Audio; // avoid clashing with the built-in Audio constructor
+window.Speech = Speech;

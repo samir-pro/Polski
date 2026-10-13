@@ -1,0 +1,14 @@
+{
+  "name": "Po Polsku! — Learn Polish A0–C2",
+  "short_name": "Po Polsku!",
+  "description": "Learn Polish from zero to mastery: everyday Polish, grammar and life in Poland.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#c8102e",
+  "lang": "en",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

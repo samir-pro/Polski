@@ -10,7 +10,8 @@ Each level has **31 steps**: 30 themed lessons plus a **validation exam (step 31
 Passing the exam unlocks the next level.
 
 No backend, no login, no build step. Everything runs in the browser, and your
-progress is saved locally so you can close the tab and carry on later.
+progress is saved locally so you can close the tab and carry on later. It also works
+**offline** and can be installed to your home screen.
 
 ## Use it online
 
@@ -23,7 +24,7 @@ One-time setup in the repository: *Settings → Pages → Build and deployment �
 
 ## Run it locally
 
-It's plain HTML/CSS/JS. Open `index.html`, or serve the folder:
+It's plain HTML/CSS/JS. Serve the folder (so the offline service worker can register) and open it:
 
 ```bash
 python3 -m http.server 8000
@@ -36,14 +37,19 @@ python3 -m http.server 8000
 |------|--------|
 | **Levels** | A0 (absolute zero), A1, A2, B1, B2, C1, C2 |
 | **Per level** | 30 themed lessons + 1 validation exam = 31 steps |
-| **Total** | 217 steps, ~1,700 high-frequency words & phrases, a tip on every lesson, example sentences |
-| **Life in Poland guide** | Always-open survival guide: emergencies, visa/residence & PESEL, university, housing, banking & BLIK, transport, shopping, health & insurance, phone/SIM, student work, etiquette. Each section has tips + key phrases with audio |
-| **Exercises** | flashcards, multiple choice (both directions), listening, matching, fill-in-the-blank, type-to-translate |
-| **Polish keyboard** | On-screen `ą ć ę ł ń ó ś ź ż` keys. Answers typed without diacritics still count, and the app shows the correct spelling |
-| **Audio** | Polish text-to-speech (`pl-PL`) through the browser's Web Speech API. No audio files — with adjustable **voice speed** (0.5×–1.5×) in Settings or the 🗣️ chip during lessons |
-| **Review past answers** | **← Previous / Next →** inside every lesson and exam to look back at questions you already answered (read-only: answers can't be changed). Next goes up to the latest question reached |
-| **Gamification** | XP, daily streak, per-step scores, a winding level path, sound effects |
-| **Spaced repetition** | Words you miss come back later (Leitner boxes) |
+| **Total** | 217 steps, ~1,700 high-frequency words & phrases, 420 example sentences, a tip on every lesson |
+| **9 exercise types** | flashcards · multiple choice (both directions) · listening · matching · fill-in-the-blank · type-to-translate · **sentence builder** (word-order tiles) · **dictation** · **speaking** (speech recognition) |
+| **Forgiving checking** | Answers typed without `ą ć ę ł ń ó ś ź ż`, and small typos in long answers, are accepted with a note showing the exact spelling. Fill-in-the-blank stays strict, since one letter is often the case ending |
+| **Polish keyboard** | On-screen `ą ć ę ł ń ó ś ź ż` keys |
+| **Audio** | Polish text-to-speech (`pl-PL`) via the Web Speech API: best-quality voice picked automatically, voice chooser, **🐢 slow replay**, adjustable speed (0.5×–1.5×) |
+| **Spaced repetition** | Every word you practise goes into Leitner boxes (1 → 30 days). **Daily review**, **tricky words** and **quick practice** sessions |
+| **Daily goal** | XP goal (10/20/30/50), progress ring, 7-day activity chart, day streak, ★ ratings per step, **Continue** button |
+| **Grammar reference** | 17 cheat sheets: sounds, noun gender, present tense, the seven cases, accusative, pronouns, numbers & złoty, past tense, aspect & future, genitive, instrumental, locative, verbs of motion, prepositions, conditional, imperative, impersonal forms & participles |
+| **Dictionary** | Every word in the course, searchable in Polish or English (with or without Polish letters), filter by level, with audio and learning status |
+| **Life in Poland guide** | Always-open survival guide: emergencies, visa/residence & PESEL, university, housing, banking & BLIK, transport, shopping, health & insurance, phone/SIM, student work, etiquette. Tips + key phrases with audio |
+| **Review past answers** | **← Previous / Next →** in every lesson and exam to look back at answered questions (read-only) |
+| **Keyboard** | `1`–`4` choose, `Enter` checks/continues, `←` `→` step through answered questions |
+| **Themes & offline** | Light / medium / dark themes, installable PWA with offline cache |
 
 ### Level overview
 
@@ -68,26 +74,31 @@ python3 -m http.server 8000
 Progress is stored in the browser via **`localStorage`** under the key
 `popolsku.progress.v1`:
 
-- Close the browser and come back: your progress is still there.
+- Close the browser and come back: your progress is still there, and **Continue** takes you to your next step.
+- Progress saved by earlier versions of the app is picked up automatically.
 - Future steps stay locked until you finish the previous one. Locked lessons can
   still be opened in **preview** mode, but those scores aren't saved.
 - **Test out**: pass any level's exam, even while the level is locked, to validate
   it and every level before it.
-- **Export / Import** under *Settings* lets you back up your progress or move it to
+- **Export / Import** under *Settings* (file or clipboard) lets you back up your progress or move it to
   another device.
 
 ## Project structure
 
 ```
-index.html          App shell
-css/styles.css      Mobile-first UI, light / medium / dark themes
-js/content.js       Course content (levels → lessons → vocab / examples)
-js/guide.js         "Life in Poland" survival guide (tips + phrases)
-js/exercises.js     Builds exercise sequences; forgiving Polish answer checking
-js/storage.js       localStorage progress, unlocking, streaks, SRS, export/import
-js/audio.js         Polish text-to-speech helper
-js/sounds.js        Synthesized feedback sounds
-js/app.js           Screens & lesson player
+index.html            App shell
+manifest.webmanifest  Installable app (PWA) metadata
+sw.js                 Service worker — offline cache
+css/styles.css        Mobile-first UI, light / medium / dark themes
+js/content.js         Course content (levels → lessons → vocab / examples)
+js/guide.js           "Life in Poland" survival guide (tips + phrases)
+js/grammar.js         Grammar cheat sheets
+js/exercises.js       Builds exercise sequences; forgiving Polish answer checking
+js/storage.js         localStorage progress, unlocking, streaks, daily goal, SRS, backup
+js/audio.js           Polish text-to-speech + speech recognition
+js/sounds.js          Synthesized feedback sounds
+js/app.js             Hash routing, screens & lesson player
+tools/validate.js     Content checks (also run in CI and before each deploy)
 ```
 
 ## Adding or editing content
@@ -104,7 +115,17 @@ The content is data-driven. To add words to a lesson, edit `js/content.js`:
 ```
 
 Use `/` in the Polish side to accept alternatives (e.g. `"dziś / dzisiaj"`), and
-add notes in parentheses, which are ignored when checking typed answers.
+add notes in parentheses, which are ignored when checking typed answers. The word to
+blank must appear in the sentence as a whole word. Example sentences also become
+sentence-builder, dictation and speaking exercises.
+
+Then run the validator:
+
+```bash
+node tools/validate.js
+```
+
+If you add a new script file, list it in `index.html` **and** in `sw.js` (the validator checks both).
 
 > Practical rules (residence permits, insurance, discounts, work rights) change
 > over time. The guide points you to the right office, but always confirm with
